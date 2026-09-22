@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Transfer Desk — irreversible answers, verified</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root { --bg:#0b0d10; --panel:#12151a; --ink:#e8e6df; --dim:#8b8f98; --amber:#ffb224; --green:#3ddc84; --red:#ff5d5d; --line:#23282f; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.55 "SF Mono", ui-monospace, Menlo, monospace; }
+  header { padding:22px 28px 14px; border-bottom:1px solid var(--line); display:flex; align-items:baseline; gap:16px; }
+  h1 { font-size:22px; letter-spacing:.18em; margin:0; color:var(--amber); text-transform:uppercase; }
+  .tag { color:var(--dim); font-size:12px; }
+  main { display:grid; grid-template-columns: 340px 1fr; gap:0; min-height:calc(100vh - 76px); }
+  aside { border-right:1px solid var(--line); padding:20px; }
+  aside h2 { font-size:11px; letter-spacing:.15em; color:var(--dim); text-transform:uppercase; margin:0 0 12px; }
+  .scenario { display:block; width:100%; text-align:left; background:var(--panel); color:var(--ink); border:1px solid var(--line); padding:10px 12px; margin-bottom:8px; cursor:pointer; font:inherit; font-size:13px; }
+  .scenario:hover { border-color:var(--amber); }
+  section { padding:20px 28px; }
+  #input { width:100%; background:var(--panel); color:var(--ink); border:1px solid var(--line); padding:12px; font:inherit; resize:none; }
+  #go { margin-top:10px; background:var(--amber); color:#000; border:0; padding:10px 22px; font:inherit; font-weight:700; letter-spacing:.1em; cursor:pointer; }
+  #go:disabled { opacity:.4; }
+  .board { margin-top:22px; border:1px solid var(--line); background:var(--panel); }
+  .row { display:flex; gap:10px; padding:9px 14px; border-bottom:1px solid var(--line); font-size:13px; }
+  .row:last-child { border-bottom:0; }
+  .lbl { color:var(--dim); width:86px; flex-shrink:0; }
+  .call .lbl { color:var(--amber); }
+  .res .lbl { color:#5aa9ff; }
+  .verdict { padding:16px 18px; }
+  .verdict .lbl { color:var(--green); }
+  .verdict-text { white-space:pre-wrap; }
+  .res .text { color:#aab0b8; max-height:150px; overflow:auto; white-space:pre-wrap; font-size:12px; }
+  .muted { color:var(--dim); }
+  #elapsed { color:var(--dim); font-size:12px; margin-top:8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Transfer Desk</h1>
+  <span class="tag">Transfers are irreversible. Ask first. — an agent over a Sanity Context Knowledge Base</span>
+</header>
+<main>
+  <aside>
+    <h2>Demo questions</h2>
+    <div id="scenarios"></div>
+    <h2 style="margin-top:24px">How it answers</h2>
+    <p class="tag">Every question runs a ReAct loop: the model calls the Sanity Context MCP (<code>initial_context</code>, <code>knowledge_base_read</code>), then writes a verdict that must cite sources and surface every conflicting claim it found — stale blogs included.</p>
+  </aside>
+  <section>
+    <textarea id="input" rows="3" placeholder="Can I still move Chase points to Korean Air SkyPass?"></textarea><br>
+    <button id="go">ASK THE DESK</button>
+    <div id="elapsed"></div>
+    <div class="board" id="board"></div>
+  </section>
+</main>
+<script>
+const SCEN = [
+  "Can I still transfer Chase Ultimate Rewards to Korean Air SkyPass?",
+  "Can I move my Bilt points to American AAdvantage?",
+  "Do Citi ThankYou points transfer to American Airlines?",
+  "What's the Amex to Aeromexico transfer ratio?",
+  "Do Capital One miles transfer at 2:1.5?",
+  "Where should I send Chase points for a Hyatt stay?"
+];
+const $ = s => document.querySelector(s);
+const board = $('#board');
+for (const q of SCEN) {
+  const b = document.createElement('button');
+  b.className = 'scenario'; b.textContent = q;
+  b.onclick = () => { $('#input').value = q; run(); };
+  $('#scenarios').appendChild(b);
+}
+function row(cls, lbl, text) {
+  const d = document.createElement('div');
+  d.className = 'row ' + cls;
+  d.innerHTML = `<span class="lbl">${lbl}</span><span class="text"></span>`;
+  d.querySelector('.text').textContent = text;
+  board.appendChild(d);
+}
+async function run() {
+  const q = $('#input').value.trim(); if (!q) return;
+  $('#go').disabled = true; board.innerHTML = ''; $('#elapsed').textContent = '';
+  row('call', 'ASK', q);
+  const t0 = Date.now();
+  try {
+    const r = await fetch('/api/ask', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({question:q})});
+    const d = await r.json();
+    for (const ev of d.trace || []) {
+      if (ev.type === 'call') row('call', 'MCP →', `${ev.tool}(${JSON.stringify(ev.args).slice(0,140)})`);
+      if (ev.type === 'result') row('res', 'KB ←', ev.text.slice(0, 600));
+    }
+    const v = document.createElement('div');
+    v.className = 'row verdict';
+    v.innerHTML = `<span class="lbl">VERDICT</span><span class="verdict-text"></span>`;
+    v.querySelector('.verdict-text').textContent = d.answer || d.error;
+    board.appendChild(v);
+    $('#elapsed').textContent = `${((d.ms ?? (Date.now()-t0))/1000).toFixed(1)}s · ${(d.trace||[]).filter(e=>e.type==='call').length} MCP calls · model ${'gpt-4o-mini'} · Sanity Context MCP`;
+  } catch(e) { row('res','ERR', String(e)); }
+  $('#go').disabled = false;
+}
+$('#go').onclick = run;
+</script>
+</body>
+</html>

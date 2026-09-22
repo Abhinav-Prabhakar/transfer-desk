@@ -1,0 +1,10 @@
+{
+  "name": "transfer-desk",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "An award-travel transfer-partner agent over a Sanity Context Knowledge Base",
+  "scripts": {
+    "start": "node app/server.mjs",
+    "seed": "node seed/seed.mjs"
+  }
+}
