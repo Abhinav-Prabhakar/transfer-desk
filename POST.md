@@ -22,6 +22,8 @@ Ask *"Do Citi points go to American?"* and you get the opposite verdict — YES,
 
 ## Demo
 
+**Live replay:** https://abhinav-prabhakar.github.io/transfer-desk/ — a static page replaying *real recorded sessions*: the actual MCP tool calls (`initial_context`, `knowledge_base_read`) and the verdicts they produced, against knowledge base `kb7RVRWsQaU8`. To run the live agent yourself: clone the repo, add an org token + any OpenAI-compatible key, `npm start` → http://localhost:3817
+
 ![Transfer Desk answering the SkyPass question: NO, removed 2018, stale blogs flagged](https://raw.githubusercontent.com/Abhinav-Prabhakar/transfer-desk/main/shots/ui-answer.png)
 
 The UI shows the raw MCP calls next to the verdict: `initial_context` to fetch the KB outline, `knowledge_base_read` to pull the relevant entries, then the cited verdict.
@@ -34,7 +36,7 @@ Try the demo questions that ship in the sidebar — they're the cases where Goog
 - Amex → Aeromexico (ratio devalued, then partner removed entirely)
 - Capital One ratios (old 2:1.5 vs current 1:1)
 
-Run it yourself: clone the repo, add an org token + one LLM key, `npm start` → http://localhost:3817
+
 
 ## Code
 
